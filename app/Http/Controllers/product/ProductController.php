@@ -1,0 +1,210 @@
+<?php
+
+namespace App\Http\Controllers\product;
+
+use App\Http\Controllers\Controller;
+use App\Models\Product;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class ProductController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        try {
+            $products = Product::all();
+            if ($products->isEmpty()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No se encontraron productos...'
+                ], 404);
+
+                return response()->json([
+                    'status' => true,
+                    'products' => $products
+                ], 200);
+            }
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                'images_carousel' => 'required',
+                'name' => 'required|min:4|unique:products',
+                'price' => 'required|integer',
+                'quantity' => 'required',
+                'description' => 'required',
+                'user_id' => 'required'
+            ]);
+
+            if ($validate->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'validation error',
+                    'errors' => $validate->errors()
+                ], 401);
+            }
+            $product = Product::create($request->all());
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Producto creado con éxito!',
+                'product' => $product
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    private function upload()
+    {
+        # code...
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function show(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                'id' => 'required'
+            ]);
+
+            if ($validate->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'validation error',
+                    'errors' => $validate->errors()
+                ], 401);
+            }
+            $product = Product::where('id', '=', $request->id)
+                ->first();
+
+            if (is_null($product)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Producto no encontrado...'
+                ], 404);
+            }
+            return response()->json([
+                'status' => true,
+                'product' => $product
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                'id' => 'required'
+            ]);
+
+            if ($validate->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'validation error',
+                    'errors' => $validate->errors()
+                ], 401);
+            }
+            $product = Product::where('id', '=', $request->id)
+                ->first();
+
+            if (is_null($product)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Producto no encontrado...'
+                ], 404);
+            }
+            $product->update($request->all());
+            return response()->json([
+                'status' => true,
+                'message' => 'Producto actualizado con éxito!',
+                'product' => $product
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                'id' => 'required'
+            ]);
+
+            if ($validate->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'validation error',
+                    'errors' => $validate->errors()
+                ], 401);
+            }
+            $product = Product::where('id', '=', $request->id)
+                ->first();
+
+            if (is_null($product)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Producto no encontrado...'
+                ], 404);
+            }
+            $product->forceDelete();
+            return response()->json([
+                'status' => true,
+                'message' => 'Producto eliminado con éxito!'
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+}
