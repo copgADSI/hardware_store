@@ -35,4 +35,6 @@ Route::controller(ProductController::class)->group(function () {
         ->middleware(['auth:sanctum', 'validateIsAdminRole:user']);
     Route::put('update-product', 'update')->name('product.update')
         ->middleware(['auth:sanctum', 'validateIsAdminRole:user']);
+    Route::post('add-favorites-product', 'addFavoritesProduct')->name('product.favorite')
+        ->middleware(['auth:sanctum']);
 });

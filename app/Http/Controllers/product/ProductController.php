@@ -3,32 +3,42 @@
 namespace App\Http\Controllers\product;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\dashboards\ProductsDashboard;
+use App\Models\Favorite;
 use App\Models\Product;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
+
+    protected Collection $products;
+    protected Collection $shoping_cart;
     /**
      * Display a listing of the resource.
-     *
+     * @param User $user
+     * @param \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(User $user, Request $request)
     {
         try {
-            $products = Product::all();
-            if ($products->isEmpty()) {
+            $finded_user = $user->where('email', $request->email)->first(); //cambiar por token
+            $this->products = (new ProductsDashboard())
+                ->getProductsAndFavoritesByUser($finded_user->id ?? null);
+
+            if ($this->products->isEmpty()) {
                 return response()->json([
                     'status' => false,
                     'message' => 'No se encontraron productos...'
                 ], 404);
-
-                return response()->json([
-                    'status' => true,
-                    'products' => $products
-                ], 200);
             }
+            return response()->json([
+                'status' => true,
+                'products' => $this->products
+            ], 200);
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
@@ -200,6 +210,48 @@ class ProductController extends Controller
                 'status' => true,
                 'message' => 'Producto eliminado con éxito!'
             ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Método usado para agregar un producto a favoritos.
+     *
+     * @param Request $request
+     * @param User $user
+     * @param Product $product
+     * @return \Illuminate\Http\Response
+     */
+    public function addFavoritesProduct(Request $request, User $user, Product $product)
+    {
+        try {
+
+            $validate = Validator::make($request->all(), [
+                'user_id' => 'required',
+                'product_id' => 'required'
+            ]);
+
+            if ($validate->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'validation error',
+                    'errors' => $validate->errors()
+                ], 401);
+            }
+
+            $user->findOrFail($request->user_id);
+            $product->findOrFail($request->product_id);
+            $favorite = Favorite::create($request->all());
+            return response()->json([
+                'status' => true,
+                'message' => 'producto agregado a mis favoritos',
+                'product' => $favorite
+            ]);
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,

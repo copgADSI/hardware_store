@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,6 +14,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected $table = "users";
     /**
      * The attributes that are mass assignable.
      *
@@ -45,10 +48,22 @@ class User extends Authenticatable
     ];
 
 
+
+    protected function password(): Attribute
+    {
+        return new Attribute(
+            set: fn ($value) => bcrypt($value)
+        );
+    }
     /* RELATIONSHIPS */
 
     public function role()
     {
         return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class, 'users_id');
     }
 }

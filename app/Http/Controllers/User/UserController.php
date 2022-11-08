@@ -73,7 +73,7 @@ class UserController extends Controller
     {
         $user_fields = $request->except('password_confirmation');
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|email',
             'email' => 'required|unique:users|email',
             'password' => 'required|min:10|confirmed',
         ]);

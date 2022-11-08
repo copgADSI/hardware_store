@@ -20,11 +20,26 @@ class ProductTest extends TestCase
      */
     public function test_list_products()
     {
-
-        $response = $this->get(route('product.list'));
+        $user = User::inRandomOrder()->first();
+        $response = $this->get(route('product.list', ['email' => $user->email]));
         $response_data = $response->json();
-        $this->assertDatabaseHas('products', $response_data);
-        $response->assertStatus(200);
+
+        if ($response_data['status']) {
+            foreach ($response_data['products'] as $key => $product) {
+                $this->assertDatabaseHas('products', [
+                    'id' => $product['id'],
+                    'images_carousel' => $product['images_carousel'],
+                    'name' => $product['name'],
+                    'price' => $product['price']
+                ]);
+
+                if (!count($product['favorites'])) continue;
+                $this->assertDatabaseHas('favorites',  $product['favorites'][0]);
+            }
+            $response->assertStatus(200);
+            return;
+        }
+        $response->assertStatus($response_data['status']);
     }
 
 
@@ -121,6 +136,27 @@ class ProductTest extends TestCase
         $response_data = $response->json();
         if ($response_data['status']) {
             $this->assertDatabaseHas('products', $response_data['product']);
+            $response->assertStatus(200);
+        } else {
+            $response->assertStatus($response_data['status']);
+        }
+    }
+
+    /**
+     * Test para comprobar que un producto se agrega a favoritos
+     *
+     * @return void
+     */
+    public function test_add_product_favorite()
+    {
+        $product = Product::inRandomOrder()->first();
+        $user = User::inRandomOrder()->first();
+        $response = $this->actingAs($user)->post(route('product.favorite', [
+            'product_id' => $product->id,
+            'user_id' => $user->id
+        ]));
+        $response_data = $response->json();
+        if ($response_data['status']) {
             $response->assertStatus(200);
         } else {
             $response->assertStatus($response_data['status']);
