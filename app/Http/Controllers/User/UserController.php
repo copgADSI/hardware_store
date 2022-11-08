@@ -3,12 +3,20 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\dashboards\ProductsDashboard;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+
+    protected $productDashboard;
+
+    public function __construct(ProductsDashboard $productDashboard)
+    {
+        $this->productDashboard = $productDashboard;
+    }
 
     /**
      * EndPoint para iniciar sesión
@@ -21,7 +29,7 @@ class UserController extends Controller
         try {
             $request->validate([
                 'email' => 'required|email',
-                'password' => 'required'
+                'password' => 'required|pass'
             ]);
 
             $user = User::where('email', $request->email)->first();
@@ -44,7 +52,8 @@ class UserController extends Controller
                 'status' => true,
                 'message' => 'User Logged In Successfully',
                 'token' => $user->createToken("access_token")->plainTextToken,
-                'user' => $user
+                'user' => $user,
+                'shopping_cart' => $this->productDashboard->getShoppingCartByUser($user->id)
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
@@ -69,7 +78,7 @@ class UserController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request,User $user)
+    public function store(Request $request, User $user)
     {
         $user_fields = $request->except('password_confirmation');
         $request->validate([

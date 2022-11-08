@@ -16,6 +16,13 @@ class ProductController extends Controller
 
     protected Collection $products;
     protected Collection $shoping_cart;
+    private $productDashboard;
+
+    public function __construct(ProductsDashboard $productDashboard)
+    {
+        $this->productDashboard = $productDashboard;
+    }
+
     /**
      * Display a listing of the resource.
      * @param User $user
@@ -26,8 +33,9 @@ class ProductController extends Controller
     {
         try {
             $finded_user = $user->where('email', $request->email)->first(); //cambiar por token
-            $this->products = (new ProductsDashboard())
-                ->getProductsAndFavoritesByUser($finded_user->id ?? null);
+            $this->productDashboard->getProductsAndFavoritesByUser(
+                $finded_user->id ?? null
+            );
 
             if ($this->products->isEmpty()) {
                 return response()->json([
