@@ -16,6 +16,8 @@ class Product extends Model
         'quantity',
         'description',
         'user_id',
+        'category_id',
+        'brand_id'
     ];
 
 
@@ -25,7 +27,18 @@ class Product extends Model
         return $this->hasOne(User::class, 'user_id');
     }
 
-    public function favorites(){
+    public function favorites()
+    {
         return $this->hasMany(Favorite::class, 'product_id');
-      }
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 }

@@ -37,4 +37,6 @@ Route::controller(ProductController::class)->group(function () {
         ->middleware(['auth:sanctum', 'validateIsAdminRole:user']);
     Route::post('add-favorites-product', 'addFavoritesProduct')->name('product.favorite')
         ->middleware(['auth:sanctum']);
+
+    Route::get('get-laptops', 'getLaptops')->name('product.laptops');
 });

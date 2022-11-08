@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\product;
 
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -54,13 +56,18 @@ class ProductTest extends TestCase
             $this->randomString .= self::CHARACTERS[$index];
         }
         $user = User::where('role_id', '<>', 2)->inRandomOrder()->first(); //admin
+        $category = Category::inRandomOrder()->first();
+        $brand = Brand::inRandomOrder()->first();
+
         $response = $this->actingAs($user)->post(route('product.store', [
             'images_carousel' => 'test',
             'name' => "test_{$this->randomString}23",
             'price' => 2000,
-            'quantity' => 20,
+            'quantity' => rand(5, 200),
             'description' => 'test',
             'user_id' => $user->id,
+            'category_id' => $category->id,
+            'brand_id' => $brand->id
         ]));
         $response_data = $response->json();
         if ($response_data['status']) {
@@ -160,5 +167,36 @@ class ProductTest extends TestCase
         } else {
             $response->assertStatus($response_data['status']);
         }
+    }
+
+    /**
+     * prueba para filtar laptops
+     *
+     * @return void
+     */
+    public function test_get_laptops()
+    {
+        $brands = Brand::all()->random()->limit(rand(1, 7))->get();
+        $response = $this->get(route('product.laptops', [
+            'prices_range' => [1000, 2000000],
+            'brand_ids' => json_decode($brands->pluck('id'))
+        ]));
+        $response_data = $response->json();
+        if ($response_data['status']) {
+            foreach ($response_data['products'] as $key => $product) {
+                $this->assertDatabaseHas('products', [
+                    'id' => $product['id'],
+                    'images_carousel' => $product['images_carousel'],
+                    'name' => $product['name'],
+                    'price' => $product['price']
+                ]);
+
+                if (!count($product['favorites'])) continue;
+                $this->assertDatabaseHas('favorites',  $product['favorites'][0]);
+            }
+            $response->assertStatus(200);
+            return;
+        }
+        $response->assertStatus(404);
     }
 }

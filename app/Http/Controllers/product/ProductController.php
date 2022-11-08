@@ -30,7 +30,6 @@ class ProductController extends Controller
     public function index(User $user, Request $request)
     {
         try {
-
             $finded_user = $user->where('email', $request->email)->first(); //cambiar por token
             $products = $this->productDashboard->getProductsAndFavoritesByUser(
                 $finded_user->id ?? null
@@ -44,7 +43,35 @@ class ProductController extends Controller
             return response()->json([
                 'status' => true,
                 'products' => $products,
-                'productsRandom' => Product::all()->random(10)
+                'productsRandom' => Product::all()->random(4)
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * obtener laptops.
+     * @param \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getLaptops( Request $request)
+    {
+
+        try {
+            $laptops = $this->productDashboard->handleLaptops($request->all());
+            if ($laptops->isEmpty()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No se encontraron productos...'
+                ], 404);
+            }
+            return response()->json([
+                'status' => true,
+                'products' => $laptops,
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
