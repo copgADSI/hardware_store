@@ -23,7 +23,6 @@ class ProductTest extends TestCase
         $user = User::inRandomOrder()->first();
         $response = $this->get(route('product.list', ['email' => $user->email]));
         $response_data = $response->json();
-
         if ($response_data['status']) {
             foreach ($response_data['products'] as $key => $product) {
                 $this->assertDatabaseHas('products', [
@@ -39,7 +38,7 @@ class ProductTest extends TestCase
             $response->assertStatus(200);
             return;
         }
-        $response->assertStatus($response_data['status']);
+        $response->assertStatus(404);
     }
 
 

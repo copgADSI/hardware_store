@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Validator;
 class ProductController extends Controller
 {
 
-    protected Collection $products;
-    protected Collection $shoping_cart;
     private $productDashboard;
 
     public function __construct(ProductsDashboard $productDashboard)
@@ -32,12 +30,12 @@ class ProductController extends Controller
     public function index(User $user, Request $request)
     {
         try {
+
             $finded_user = $user->where('email', $request->email)->first(); //cambiar por token
-            $this->productDashboard->getProductsAndFavoritesByUser(
+            $products = $this->productDashboard->getProductsAndFavoritesByUser(
                 $finded_user->id ?? null
             );
-
-            if ($this->products->isEmpty()) {
+            if ($products->isEmpty()) {
                 return response()->json([
                     'status' => false,
                     'message' => 'No se encontraron productos...'
@@ -45,7 +43,8 @@ class ProductController extends Controller
             }
             return response()->json([
                 'status' => true,
-                'products' => $this->products
+                'products' => $products,
+                'productsRandom' => Product::all()->random(10)
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
