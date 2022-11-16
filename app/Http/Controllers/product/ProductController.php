@@ -30,9 +30,13 @@ class ProductController extends Controller
     public function index(User $user, Request $request)
     {
         try {
+            $brads_ids['brands'] = json_decode($request->brands_ids);
+            $categories_ids['categories'] = json_decode($request->categories_ids);
+            $filters = array_merge($brads_ids, $categories_ids);
             $finded_user = $user->where('email', $request->email)->first(); //cambiar por token
             $products = $this->productDashboard->getProductsAndFavoritesByUser(
-                $finded_user->id ?? null
+                $finded_user->id ?? null,
+                $filters,
             );
             if ($products->isEmpty()) {
                 return response()->json([
@@ -43,7 +47,11 @@ class ProductController extends Controller
             return response()->json([
                 'status' => true,
                 'products' => $products,
-                'productsRandom' => Product::all()->random(4)
+                'productsRandom' => Product::all()->random(4),
+                'priceRange' => [
+                    'max' => Product::max('price'),
+                    'min' => Product::min('price')
+                ]
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
@@ -58,9 +66,8 @@ class ProductController extends Controller
      * @param \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function getLaptops( Request $request)
+    public function getLaptops(Request $request)
     {
-
         try {
             $laptops = $this->productDashboard->handleLaptops($request->all());
             if ($laptops->isEmpty()) {
@@ -146,8 +153,9 @@ class ProductController extends Controller
                     'errors' => $validate->errors()
                 ], 401);
             }
-            $product = Product::where('id', '=', $request->id)
-                ->first();
+            $product = $this->productDashboard->getSingleProduct(
+                $request->id
+            );
 
             if (is_null($product)) {
                 return response()->json([
@@ -157,7 +165,7 @@ class ProductController extends Controller
             }
             return response()->json([
                 'status' => true,
-                'product' => $product
+                'product' => $product[0]
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
@@ -284,7 +292,7 @@ class ProductController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'producto agregado a mis favoritos',
-                'product' => $favorite
+                'favorites' => $favorite
             ]);
         } catch (\Throwable $th) {
             return response()->json([
@@ -292,5 +300,54 @@ class ProductController extends Controller
                 'message' => $th->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Método usado para listados los productos favoritos
+     *
+     * @param Request $request
+     * @param User $user
+     * @param Favorite $favorite
+     * @return \Illuminate\Http\Response
+     */
+    public function getFavorites(Request $request, User $user, Favorite $favorite)
+    {
+        $request->validate([
+            'user_id' => 'required'
+        ]);
+        $user->findOrFail(['id' => $request->user_id]);
+        $favorites = $favorite->where('user_id', '=', $request->user_id)->get();
+        return response()->json([
+            'status' => true,
+            'total' => $favorites->count(),
+            'favorites' => $favorites
+        ], 200);
+    }
+
+    /**
+     * Método usado para listados los productos favoritos
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function searchMatches(Request $request)
+    {
+        $request->validate([
+            'term' => 'required'
+        ]);
+        $response_data = $this->productDashboard->searchProducts(
+            $request->term
+        );
+        if ($response_data->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No se encontraron coincidencias'
+            ], 404);
+        }
+        return response()->json([
+            'status' => true,
+            'message' => 'Registros encontrados',
+            'matches' => $response_data
+        ], 200);
     }
 }

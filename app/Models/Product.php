@@ -41,4 +41,9 @@ class Product extends Model
     {
         return $this->belongsTo(Category::class);
     }
+
+    public function shoppingCart()
+    {
+        return $this->hasMany(ShoppingCart::class, 'product_id');
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\dashboards\ProductsDashboard;
+use App\Models\ShoppingCart;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -29,7 +30,7 @@ class UserController extends Controller
         try {
             $request->validate([
                 'email' => 'required|email',
-                'password' => 'required|pass'
+                'password' => 'required'
             ]);
 
             $user = User::where('email', $request->email)->first();
@@ -47,7 +48,8 @@ class UserController extends Controller
                     'message' => 'password not match'
                 ], 302);
             }
-
+            $user->last_login = now()->toDateTimeString();
+            $user->save();
             return response()->json([
                 'status' => true,
                 'message' => 'User Logged In Successfully',
@@ -106,12 +108,34 @@ class UserController extends Controller
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param User $user
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, User $user)
     {
-        //
+        $request->validate([
+            'id' => 'required'
+        ]);
+        if (!is_null($request->password)) {
+            $request->validate([
+                'password' => 'confirmed'
+            ]);
+        }
+        $user_data = $user->where('id', $request->id)->first();
+        if (is_null($user_data)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Usuario no encontrado',
+                'user' => $request->all()
+            ], 404);
+        }
+        $user_data->update($request->all());
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Usuario actualizado con éxito',
+            'user' => $user_data
+        ], 200);
     }
 
     /**

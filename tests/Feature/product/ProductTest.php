@@ -40,7 +40,7 @@ class ProductTest extends TestCase
             $response->assertStatus(200);
             return;
         }
-        $response->assertStatus(404);
+        $response->assertStatus(500);
     }
 
 
@@ -141,7 +141,9 @@ class ProductTest extends TestCase
         ]));
         $response_data = $response->json();
         if ($response_data['status']) {
-            $this->assertDatabaseHas('products', $response_data['product']);
+            $this->assertDatabaseHas('products', [
+                'price' => $response_data['product'],
+            ]);
             $response->assertStatus(200);
         } else {
             $response->assertStatus($response_data['status']);
@@ -193,6 +195,35 @@ class ProductTest extends TestCase
 
                 if (!count($product['favorites'])) continue;
                 $this->assertDatabaseHas('favorites',  $product['favorites'][0]);
+            }
+            $response->assertStatus(200);
+            return;
+        }
+        $response->assertStatus(404);
+    }
+
+    /**
+     * prueba para filtar laptops
+     *
+     * @return void
+     */
+    public function test_search_matches()
+    {
+        $product = Product::inRandomOrder()->first();
+        $term = explode('_', $product->name);
+        $response = $this->get(route('product.match', [
+            'term' => $term[0],
+        ]));
+        $response_data = $response->json();
+
+        if ($response_data['status']) {
+            foreach ($response_data['matches'] as $product) {
+                $this->assertDatabaseHas('products', [
+                    'id' => $product['id'],
+                    'images_carousel' => $product['images_carousel'],
+                    'name' => $product['name'],
+                    'price' => $product['price']
+                ]);
             }
             $response->assertStatus(200);
             return;
