@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Address;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AddressController extends Controller
 {
@@ -22,12 +23,6 @@ class AddressController extends Controller
         ]);
 
         $addresses =  $address->where('user_id', '=', $request->user_id)->get();
-        if ($addresses->isEmpty()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'No se encontraron direccines'
-            ], 404);
-        }
 
         return response()->json([
             'status' => true,
@@ -47,10 +42,15 @@ class AddressController extends Controller
     {
         $request->validate([
             'user_id' => 'required',
-            'line_one' => 'required'
+            'line_one' => 'required|unique:addresses',
+            'city_id' => 'required|numeric',
+            'departament_id' => 'required|numeric'
         ]);
 
-        $address_data = $address->create($request->all());
+        $address_data = null;
+        DB::transaction(function () use ($address, $request, $address_data) {
+            $address_data = $address->create($request->all());
+        });
         return response()->json([
             'status' => true,
             'address' => $address_data,

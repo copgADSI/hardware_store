@@ -62,11 +62,6 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
-    public function favorites()
-    {
-        return $this->hasMany(Favorite::class, 'users_id');
-    }
-
     public function adresses()
     {
         return $this->hasMany(Address::class);
@@ -74,6 +69,6 @@ class User extends Authenticatable
 
     public function shoppingCart()
     {
-        return $this->hasMany(ShoppingCart::class);
+        return $this->hasMany(ShoppingCart::class, 'product_id');
     }
 }

@@ -31,12 +31,6 @@ class ShoppingCartController extends Controller
             'user_id' => 'required'
         ]);
         $cart = $this->cartDashboard->getCartData($request->user_id);
-        if ($cart->isEmpty()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Carrito de compras vacío'
-            ], 401);
-        }
         return response()->json([
             'status' => true,
             'shopping_cart' => $cart,
@@ -105,22 +99,54 @@ class ShoppingCartController extends Controller
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param  ShoppingCart $shoppingCart
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, ShoppingCart $shoppingCart)
     {
-        //
+        $request->validate([
+            'product_id' => 'required|numeric',
+            'user_id' => 'required|numeric',
+        ]);
+        $product = Product::findOrFail(['id' => $request->product_id])->first();
+        $subtotal  = $product->price * $request->quantity;
+        $cart = $shoppingCart->updateOrCreate([
+            'product_id' => $request->product_id,
+            'user_id' => $request->user_id
+        ]);
+
+        DB::transaction(function () use ($request, $cart, $subtotal) {
+            $cart->quantity = $request->quantity;
+            $cart->subtotal = $subtotal;
+            $cart->save();
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Carrito de compras actualizado'
+        ], 200);
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  int  $id
+     *  @param Request $request
+     * @param  ShoppingCart $shoppingCart
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function remove(Request $request, ShoppingCart $shoppingCart)
     {
-        //
+        $request->validate([
+            'product_id' => 'required|numeric',
+            'user_id' => 'required|numeric'
+        ]);
+
+        $product = $shoppingCart->where($request->all())->first();
+        DB::transaction(function () use ($product) {
+            $product->delete();
+        });
+        return response()->json([
+            'status' => true,
+            'message' => 'Producto removido del carrito'
+        ], 200);
     }
 }

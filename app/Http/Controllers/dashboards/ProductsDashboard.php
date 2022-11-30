@@ -17,7 +17,7 @@ class ProductsDashboard extends Controller
      * @param array $filters
      * @return Collection
      */
-    public function getProductsAndFavoritesByUser(int $user_id = null, array $filters): Collection
+    public function getInfoProducts(int $user_id = null, array $filters): Collection
     {
         $query = Product::query()
             ->where('quantity', '>', 0);
@@ -30,8 +30,16 @@ class ProductsDashboard extends Controller
         $query->with(['favorites' => function ($hasMany) use ($user_id) {
             $hasMany->where('user_id', '=', $user_id);
         }])
+            ->withCount(['reviews as reviews_avg' => function ($hasMany) {
+                // promediar y dedondear resultado
+                $hasMany->select(DB::raw('ROUND(AVG(rating),0)'));
+            }])
+            ->withCount(['reviews as reviews_total' => function ($hasMany) {
+                // Obtener el total de reseñas por producto
+                $hasMany->select(DB::raw('COUNT(product_id)'))
+                    ->groupBy('product_id');
+            }])
             ->orderBy('price');
-
         return $query->get();
     }
 

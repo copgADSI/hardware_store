@@ -30,6 +30,21 @@ class UserTest extends TestCase
     }
 
     /**
+     * test para el cierre de sesión
+     *
+     * @return void
+     */
+    public function test_user_logout_(): void
+    {
+        $user = User::inRandomOrder()->first();
+        $response = $this->actingAs($user)->post(route('user.logout', [
+            'id' => $user->id
+        ]));
+        $response_data = $response->json();
+        $response->assertStatus(200);
+    }
+
+    /**
      * test para registro de usuarios
      *
      * @return void

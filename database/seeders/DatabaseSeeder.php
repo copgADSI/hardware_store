@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
+use Database\Seeders\role\RolesSeeder;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -23,6 +25,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BrandsSeed::class,
             CategoriesSeed::class,
+            RolesSeeder::class,
+            CitiesByDepartamentSeeder::class,
         ]);
     }
 }

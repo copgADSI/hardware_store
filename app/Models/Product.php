@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
     use HasFactory;
-
+    protected $table = "products";
     protected $fillable = [
-        'images_carousel',
+        'carousel',
         'name',
         'price',
         'quantity',
@@ -20,11 +21,32 @@ class Product extends Model
         'brand_id'
     ];
 
+    protected function carousel(): Attribute
+    {
+        return new Attribute(
+            get: function ($value) {
+                return explode(',', $value);
+            }
+        );
+    }
 
+    protected function name(): Attribute
+    {
+        return new Attribute(
+            get: fn ($value) => strtoupper($value)
+        );
+    }
+
+    /* protected function price(): Attribute
+    {
+        return new Attribute(
+            get: fn ($value) => number_format($value, ',')
+        );
+    } */
     /* RELATIONSHIPS */
     public function user()
     {
-        return $this->hasOne(User::class, 'user_id');
+        return $this->hasOne(User::class);
     }
 
     public function favorites()
@@ -45,5 +67,15 @@ class Product extends Model
     public function shoppingCart()
     {
         return $this->hasMany(ShoppingCart::class, 'product_id');
+    }
+
+    public function images()
+    {
+        return $this->hasMany(Image::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'product_id');
     }
 }

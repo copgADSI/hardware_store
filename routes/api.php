@@ -2,10 +2,13 @@
 
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\departament\DepatamentController;
 use App\Http\Controllers\product\ProductController;
+use App\Http\Controllers\review\ReviewController;
 use App\Http\Controllers\ShoppingCartController;
 use App\Http\Controllers\User\AddressController;
 use App\Http\Controllers\User\UserController;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\TextUI\XmlConfiguration\Group;
@@ -35,6 +38,8 @@ Route::middleware('auth:sanctum')->controller(UserController::class)->group(func
         ->name('user.update');
     Route::put('updateUser', 'update')
         ->name('user.update');
+    Route::post('user-logout', 'logout')
+        ->name('user.logout');
 });
 
 Route::middleware('auth:sanctum')->controller(AddressController::class)->group(function () {
@@ -51,6 +56,10 @@ Route::controller(ShoppingCartController::class)->group(function () {
         ->name('user.shopping_cart')->middleware(['auth:sanctum']);
     Route::post('add-to-cart', 'addToCart')
         ->name('user.addToCart')->middleware('auth:sanctum');
+    Route::put('update-to-cart', 'update')
+        ->name('cart.update')->middleware('auth:sanctum');
+    Route::delete('remove-product', 'remove')
+        ->name('cart.remove')->middleware('auth:sanctum');
 });
 
 
@@ -66,16 +75,31 @@ Route::controller(ProductController::class)->group(function () {
         ->middleware(['auth:sanctum', 'validateIsAdminRole:user']);
     Route::get('get-laptops', 'getLaptops')->name('product.laptops');
 
+
     Route::post('add-favorites-product', 'addFavoritesProduct')->name('product.favorite')
         ->middleware(['auth:sanctum']);
     Route::get('get-favorites', 'getFavorites')->name('products.getFavorites')
         ->middleware(['auth:sanctum']);
+    Route::delete('delete-favorite', 'destroyFavorite')->name('favorite.destroy')
+        ->middleware(['auth:sanctum']);
+
+    Route::get('price-range', 'getPriceRange')->name('product.range');
 });
 
 Route::controller(CategoryController::class)->group(function () {
     Route::get('categories', 'index')->name('categories.index');
+    Route::post('create-category', 'store')->name('categories.store');
 });
 
 Route::controller(BrandController::class)->group(function () {
     Route::get('brands', 'index')->name('brands.index');
+});
+
+Route::controller(ReviewController::class)->group(function () {
+    Route::get('get-reviews-by-product', 'index')->name('reviews.index');
+});
+
+Route::middleware(['auth:sanctum'])->controller(DepatamentController::class)->group(function () {
+    Route::get('get-departaments', 'index')->name('departaments.index');
+    Route::get('get-cities-by-departaments-selected', 'getCitiesByDepartament')->name('departament.cities');
 });

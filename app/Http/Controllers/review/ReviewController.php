@@ -1,19 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\review;
 
-use App\Http\Controllers\dashboards\CategoriesDashboard;
-use App\Models\Category;
+use App\Http\Controllers\Controller;
+use App\Http\Controllers\dashboards\ReviewsDashboard;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
-class CategoryController extends Controller
+class ReviewController extends Controller
 {
-    protected $categoriesDashboard;
 
-    public function __construct(CategoriesDashboard $categoriesDashboard)
+    protected $reviewsDashboard;
+    public function __construct(ReviewsDashboard $reviewsDashboard)
     {
-        $this->categoriesDashboard = $categoriesDashboard;
+        $this->reviewsDashboard = $reviewsDashboard;
     }
     /**
      * Display a listing of the resource.
@@ -22,8 +21,9 @@ class CategoryController extends Controller
      */
     public function index()
     {
+
         return response()->json([
-            'categories' => $this->categoriesDashboard->getCountByCategory()
+            'total_reviews' => $this->reviewsDashboard->totalReviews(),
         ], 200);
     }
 
@@ -31,23 +31,11 @@ class CategoryController extends Controller
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param Category $category
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request, Category $category)
+    public function store(Request $request)
     {
-        $request->validate([
-            'category' => 'required|unique:categories'
-        ]);
-        DB::transaction(function () use ($request, $category) {
-            $category->category = $request->category;
-            $category->save();
-        });
-
-        return response()->json([
-            'status' => true,
-            'message' => "Categoría {$request->category} creada con éxito",
-        ]);
+        //
     }
 
     /**

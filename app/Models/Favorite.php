@@ -14,11 +14,11 @@ class Favorite extends Model
     /* RELATIONSHIPS */
     public function user()
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class, 'user_id');
     }
 
     public function product()
     {
-        return $this->belongsToMany(Product::class);
+        return $this->belongsToMany(Product::class, 'product_id');
     }
 }

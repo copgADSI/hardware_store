@@ -4,21 +4,25 @@ namespace App\Http\Controllers\product;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\dashboards\ProductsDashboard;
+use App\Http\Controllers\dashboards\ReviewsDashboard;
 use App\Models\Favorite;
 use App\Models\Product;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
 
-    private $productDashboard;
+    protected $productDashboard;
+    protected $reviewsDashboard;
 
-    public function __construct(ProductsDashboard $productDashboard)
+    public function __construct(ProductsDashboard $productDashboard, ReviewsDashboard $reviewsDashboard)
     {
         $this->productDashboard = $productDashboard;
+        $this->reviewsDashboard = $reviewsDashboard;
     }
 
     /**
@@ -34,20 +38,14 @@ class ProductController extends Controller
             $categories_ids['categories'] = json_decode($request->categories_ids);
             $filters = array_merge($brads_ids, $categories_ids);
             $finded_user = $user->where('email', $request->email)->first(); //cambiar por token
-            $products = $this->productDashboard->getProductsAndFavoritesByUser(
+            $products = $this->productDashboard->getInfoProducts(
                 $finded_user->id ?? null,
                 $filters,
             );
-            if ($products->isEmpty()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No se encontraron productos...'
-                ], 404);
-            }
+
             return response()->json([
                 'status' => true,
                 'products' => $products,
-                'productsRandom' => Product::all()->random(4),
                 'priceRange' => [
                     'max' => Product::max('price'),
                     'min' => Product::min('price')
@@ -59,6 +57,20 @@ class ProductController extends Controller
                 'message' => $th->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * obtener precio máximo y mínimo
+     * @return \Illuminate\Http\Response
+     */
+    public function getPriceRange()
+    {
+        return  response()->json([
+            'priceRange' => [
+                'max' => Product::max('price'),
+                'min' => Product::min('price')
+            ]
+        ], 200);
     }
 
     /**
@@ -98,14 +110,13 @@ class ProductController extends Controller
     {
         try {
             $validate = Validator::make($request->all(), [
-                'images_carousel' => 'required',
+                'carousel' => 'required',
                 'name' => 'required|min:4|unique:products',
                 'price' => 'required|integer',
                 'quantity' => 'required',
                 'description' => 'required',
-                'user_id' => 'required'
-            ]);
-
+                /* 'user_id' => 'required' */
+            ]);;
             if ($validate->fails()) {
                 return response()->json([
                     'status' => false,
@@ -113,12 +124,20 @@ class ProductController extends Controller
                     'errors' => $validate->errors()
                 ], 401);
             }
-            $product = Product::create($request->all());
+
+            $fields = $request->all();
+            $fields['carousel'] = $this->uploadImageToS3(
+                $request
+            );
+
+            DB::transaction(function () use ($fields) {
+                Product::create($fields);
+            });
 
             return response()->json([
                 'status' => true,
                 'message' => 'Producto creado con éxito!',
-                'product' => $product
+                'product' => $fields
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
@@ -128,9 +147,31 @@ class ProductController extends Controller
         }
     }
 
-    private function upload()
+    /**
+     * Proceso para subir las imágenes de cada producto a amazon s3
+     * @return string
+     */
+    private function uploadImageToS3($request): string
     {
-        # code...
+        if ($request->hasFile('carousel')) {
+            $urls = [];
+            foreach ($request->carousel as $image) {
+                $path_name = str_replace(' ', '_',  $request->name);
+                /** Proceso para guardar gif en disco s3 */
+                $full_path = Storage::disk('s3')->put($path_name, $image, 'public');
+                /** Url de acceso a imgs y valor para la prop images de BD*/
+                $full_url = Storage::disk('s3')->url($full_path);
+                $urls[] = $full_url;
+            }
+            return implode(',', $urls);
+            /* $urls = [];
+            foreach ($request->carousel as $image) {
+                $current_time = time();
+                $url = $image->store("images/{$current_time}");
+                $urls[] = $url;
+            }
+            return implode(',', $urls); */
+        }
     }
 
     /**
@@ -195,15 +236,7 @@ class ProductController extends Controller
                     'errors' => $validate->errors()
                 ], 401);
             }
-            $product = Product::where('id', '=', $request->id)
-                ->first();
-
-            if (is_null($product)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Producto no encontrado...'
-                ], 404);
-            }
+            $product = Product::findOrFail($request->id);
             $product->update($request->all());
             return response()->json([
                 'status' => true,
@@ -238,15 +271,9 @@ class ProductController extends Controller
                     'errors' => $validate->errors()
                 ], 401);
             }
-            $product = Product::where('id', '=', $request->id)
-                ->first();
-
-            if (is_null($product)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Producto no encontrado...'
-                ], 404);
-            }
+            $product = Product::findOrFail($request->id);
+            //agregar delete a bucket
+            Storage::disk('s3')->delete($product->carousel);
             $product->forceDelete();
             return response()->json([
                 'status' => true,
@@ -288,12 +315,14 @@ class ProductController extends Controller
 
             $user->findOrFail($request->user_id);
             $product->findOrFail($request->product_id);
-            $favorite = Favorite::create($request->all());
-            return response()->json([
-                'status' => true,
-                'message' => 'producto agregado a mis favoritos',
-                'favorites' => $favorite
-            ]);
+            DB::transaction(function () use ($request) {
+                $favorite = Favorite::updateOrCreate($request->all());
+                return response()->json([
+                    'status' => true,
+                    'message' => 'producto agregado a mis favoritos',
+                    'favorites' => $favorite
+                ]);
+            });
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
@@ -316,11 +345,38 @@ class ProductController extends Controller
             'user_id' => 'required'
         ]);
         $user->findOrFail(['id' => $request->user_id]);
-        $favorites = $favorite->where('user_id', '=', $request->user_id)->get();
+        $favorites = $favorite->join('products', 'favorites.product_id', '=', 'products.id')
+            ->where('favorites.user_id', '=', $request->user_id);
         return response()->json([
             'status' => true,
-            'total' => $favorites->count(),
-            'favorites' => $favorites
+            'total' => $favorites->get()->count(),
+            'favorites' => $favorites->paginate(10)
+        ], 200);
+    }
+
+    /**
+     * Método usado para eliminar favoritos del usuario
+     *
+     * @param Request $request
+     * @param User $user
+     * @param Favorite $favorite
+     * @return \Illuminate\Http\Response
+     */
+    public function destroyFavorite(Request $request, User $user, Favorite $favorite)
+    {
+        $request->validate([
+            'user_id' => 'required',
+            'product_id' => 'required'
+        ]);
+        $user->findOrFail(['id' => $request->user_id]);
+        $favorite
+            ->where('user_id', $request->user_id)
+            ->where('product_id', $request->product_id)
+            ->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Producto eliminado de favoritos'
         ], 200);
     }
 

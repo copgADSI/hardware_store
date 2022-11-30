@@ -4,6 +4,7 @@ namespace Tests\Feature\product;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Favorite;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,13 +24,20 @@ class ProductTest extends TestCase
     public function test_list_products()
     {
         $user = User::inRandomOrder()->first();
-        $response = $this->get(route('product.list', ['email' => $user->email]));
+        $brands = Brand::inRandomOrder()->get();
+        $categories = Category::inRandomOrder()->get();
+
+        $response = $this->actingAs($user)->get(route('product.list', [
+            'email' => $user->email,
+            'brands_ids'  => json_encode($brands->pluck('id')),
+            'categories_ids' => json_encode($categories->pluck('id')),
+        ]));
         $response_data = $response->json();
         if ($response_data['status']) {
             foreach ($response_data['products'] as $key => $product) {
                 $this->assertDatabaseHas('products', [
                     'id' => $product['id'],
-                    'images_carousel' => $product['images_carousel'],
+                    'carousel' => $product['carousel'],
                     'name' => $product['name'],
                     'price' => $product['price']
                 ]);
@@ -55,12 +63,11 @@ class ProductTest extends TestCase
             $index = rand(0, strlen(self::CHARACTERS) - 1);
             $this->randomString .= self::CHARACTERS[$index];
         }
-        $user = User::where('role_id', '<>', 2)->inRandomOrder()->first(); //admin
+        $user = User::where('role_id', '=', 2)->inRandomOrder()->first(); //admin
         $category = Category::inRandomOrder()->first();
         $brand = Brand::inRandomOrder()->first();
-
         $response = $this->actingAs($user)->post(route('product.store', [
-            'images_carousel' => 'test',
+            'carousel' => 'test',
             'name' => "test_{$this->randomString}23",
             'price' => 2000,
             'quantity' => rand(5, 200),
@@ -69,6 +76,7 @@ class ProductTest extends TestCase
             'category_id' => $category->id,
             'brand_id' => $brand->id
         ]));
+        dd($response->json());
         $response_data = $response->json();
         if ($response_data['status']) {
             $this->assertDatabaseHas('products', $response_data['product']);
@@ -87,7 +95,7 @@ class ProductTest extends TestCase
     public function test_a_delete_product()
     {
         $product = Product::inRandomOrder()->first();
-        $user = User::where('role_id', '<>', 2)->inRandomOrder()->first(); //admin
+        $user = User::where('role_id', '=', 2)->inRandomOrder()->first(); //admin
         $response = $this->actingAs($user)->delete(route('product.destroy', [
             'id' => $product->id
         ]));
@@ -112,7 +120,7 @@ class ProductTest extends TestCase
             $this->randomString .= self::CHARACTERS[$index];
         }
         $product = Product::inRandomOrder()->first();
-        $user = User::where('role_id', '<>', 2)->inRandomOrder()->first(); //admin
+        $user = User::where('role_id', '=', 2)->inRandomOrder()->first(); //admin
         $response = $this->actingAs($user)->put(route('product.update', [
             'id' => $product->id,
             'name' =>  "test_{$this->randomString}",
@@ -172,6 +180,61 @@ class ProductTest extends TestCase
     }
 
     /**
+     * Test para obtener todos los favoritos del usuario
+     *
+     * @return void
+     */
+    public function test_get_favorites()
+    {
+        $favorites = Favorite::inRandomOrder()->first();
+        $user = User::where('id', '=', $favorites->user_id)->first();
+        $response = $this->actingAs($user)->get(route('products.getFavorites', [
+            'user_id' => $user->id
+        ]));
+        $response_data = $response->json();
+
+        foreach ($response_data['favorites']['data'] as  $product) {
+            $this->assertDatabaseHas('favorites', [
+                'id' => $product['id'],
+                'product_id' => $product['product_id'],
+            ]);
+        }
+        if ($response_data['status']) {
+            $response->assertStatus(200);
+        } else {
+            $response->assertStatus(404);
+        }
+    }
+
+    /**
+     * Test para eliminar favoritos del usuario
+     *
+     * @return void
+     */
+    public function test_delete_favorite()
+    {
+        $favorites = Favorite::inRandomOrder()->first();
+        $user = User::where('id', '=', $favorites->user_id)->first();
+        $response = $this->actingAs($user)->delete(route('favorite.destroy', [
+            'user_id' => $favorites->user_id,
+            'product_id' => $favorites->product_id
+        ]));
+        $response_data = $response->json();
+        dd($response_data);
+        foreach ($response_data['favorites']['data'] as  $product) {
+            $this->assertDatabaseHas('favorites', [
+                'id' => $product['id'],
+                'product_id' => $product['product_id'],
+            ]);
+        }
+        if ($response_data['status']) {
+            $response->assertStatus(200);
+        } else {
+            $response->assertStatus(404);
+        }
+    }
+
+    /**
      * prueba para filtar laptops
      *
      * @return void
@@ -188,7 +251,7 @@ class ProductTest extends TestCase
             foreach ($response_data['products'] as $key => $product) {
                 $this->assertDatabaseHas('products', [
                     'id' => $product['id'],
-                    'images_carousel' => $product['images_carousel'],
+                    'carousel' => $product['carousel'],
                     'name' => $product['name'],
                     'price' => $product['price']
                 ]);
@@ -220,7 +283,7 @@ class ProductTest extends TestCase
             foreach ($response_data['matches'] as $product) {
                 $this->assertDatabaseHas('products', [
                     'id' => $product['id'],
-                    'images_carousel' => $product['images_carousel'],
+                    'carousel' => $product['carousel'],
                     'name' => $product['name'],
                     'price' => $product['price']
                 ]);

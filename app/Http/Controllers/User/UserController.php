@@ -7,6 +7,7 @@ use App\Http\Controllers\dashboards\ProductsDashboard;
 use App\Models\ShoppingCart;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -55,7 +56,38 @@ class UserController extends Controller
                 'message' => 'User Logged In Successfully',
                 'token' => $user->createToken("access_token")->plainTextToken,
                 'user' => $user,
+                'role' => $user->role->role,
                 'shopping_cart' => $this->productDashboard->getShoppingCartByUser($user->id)
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * EndPoint para cerrar iniciar sesión
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function logout(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required',
+            ]);
+            $user = User::findOrFail($request->id);
+            DB::transaction(function () use ($user) {
+                $user->tokens()->delete();
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Cerró exitosamente sesión',
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
@@ -84,7 +116,7 @@ class UserController extends Controller
     {
         $user_fields = $request->except('password_confirmation');
         $request->validate([
-            'name' => 'required|email',
+            'name' => 'required',
             'email' => 'required|unique:users|email',
             'password' => 'required|min:10|confirmed',
         ]);

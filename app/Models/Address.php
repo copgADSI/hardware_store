@@ -9,7 +9,14 @@ class Address extends Model
 {
     use HasFactory;
     protected $table = "addresses";
-    protected $fillable = ['line_one', 'line_two', 'phone', 'user_id'];
+    protected $fillable = [
+        'line_one',
+        'line_two',
+        'phone',
+        'user_id',
+        'city_id',
+        'departament_id'
+    ];
 
     /* RELATIONSHIP */
     public function user()

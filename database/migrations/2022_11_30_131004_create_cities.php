@@ -13,16 +13,13 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('products', function (Blueprint $table) {
+        Schema::create('cities', function (Blueprint $table) {
             $table->id();
-            $table->string('carousel', 500);
-            $table->string('name');
-            $table->integer('price');
-            $table->integer('quantity');
-            $table->text('description');
-            $table->unsignedBigInteger('user_id');
+            $table->string('city');
+            $table->unsignedBigInteger('departament_id');
             $table->timestamps();
-            $table->foreign('user_id')->references('id')->on('users');
+            $table->foreign('departament_id')
+                ->references('id')->on('departaments')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 
@@ -33,6 +30,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('products');
+        Schema::dropIfExists('cities');
     }
 };
