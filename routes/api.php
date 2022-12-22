@@ -3,6 +3,7 @@
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\departament\DepatamentController;
+use App\Http\Controllers\payment\PaymentController;
 use App\Http\Controllers\product\ProductController;
 use App\Http\Controllers\review\ReviewController;
 use App\Http\Controllers\ShoppingCartController;
@@ -49,6 +50,10 @@ Route::middleware('auth:sanctum')->controller(AddressController::class)->group(f
         ->name('addresses.store');
     Route::put('update-addresses-by-user', 'update')
         ->name('addresses.update');
+    Route::put('update-principal-address', 'updatePrincipalAddress')
+        ->name('addresses.principal');
+    Route::delete('delete-address', 'destroy')
+        ->name('addresses.destroy');
 });
 
 Route::controller(ShoppingCartController::class)->group(function () {
@@ -102,4 +107,8 @@ Route::controller(ReviewController::class)->group(function () {
 Route::middleware(['auth:sanctum'])->controller(DepatamentController::class)->group(function () {
     Route::get('get-departaments', 'index')->name('departaments.index');
     Route::get('get-cities-by-departaments-selected', 'getCitiesByDepartament')->name('departament.cities');
+});
+
+Route::middleware(['auth:sanctum'])->controller(PaymentController::class)->group(function () {
+    Route::post('payment-process', 'poorPayment')->name('payment.process');
 });

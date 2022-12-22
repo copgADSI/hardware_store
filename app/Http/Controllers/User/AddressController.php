@@ -22,7 +22,8 @@ class AddressController extends Controller
             'user_id' => 'required'
         ]);
 
-        $addresses =  $address->where('user_id', '=', $request->user_id)->get();
+        $addresses =  $address->where('user_id', '=', $request->user_id)
+            ->orderBy('created_at')->get();
 
         return response()->json([
             'status' => true,
@@ -42,13 +43,16 @@ class AddressController extends Controller
     {
         $request->validate([
             'user_id' => 'required',
-            'line_one' => 'required|unique:addresses',
+            'line_one' => 'required',
             'city_id' => 'required|numeric',
             'departament_id' => 'required|numeric'
         ]);
 
         $address_data = null;
         DB::transaction(function () use ($address, $request, $address_data) {
+            $address->where('user_id', $request->user_id)->update([
+                'active' => false
+            ]);
             $address_data = $address->create($request->all());
         });
         return response()->json([
@@ -100,13 +104,58 @@ class AddressController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Eliminar dirección
      *
-     * @param  int  $id
+     * @param  Request $request
+     * @param Address $address
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Request $request, Address $address)
     {
-        //
+        $request->validate([
+            'id' => 'required|numeric',
+            'user_id' => 'required|numeric'
+        ]);
+        DB::transaction(function () use ($request, $address) {
+            $finded_address = $address->find($request->all())->first();
+            $finded_address->delete();
+            $count_addresses = $address->where('user_id', $request->user_id)->get();
+            if ($count_addresses->count() === 1) {
+                $count_addresses->first()->update([
+                    'active' => true
+                ]);
+            }
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Dirección eliminada'
+        ], 200);
+    }
+
+    /**
+     * actualizar dirección principal
+     *
+     * @param  Request $request
+     * @param Address $address
+     * @return \Illuminate\Http\Response
+     */
+    public function updatePrincipalAddress(Request $request, Address $address)
+    {
+        $request->validate([
+            'user_id' => 'required|numeric',
+            'id' => 'required',
+        ]);
+        DB::transaction(function () use ($request, $address) {
+            $addresses_olds = $address->where('user_id', $request->user_id);
+            $addresses_olds->update([
+                'active' => false
+            ]);
+            $addresses_olds->where('id', $request->id)->update(['active' => true]);
+        });
+        return response()->json([
+            'status' => true,
+            'message' => 'Dirección principal cambiada'
+        ], 200);
     }
 }

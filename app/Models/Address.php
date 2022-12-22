@@ -13,6 +13,7 @@ class Address extends Model
         'line_one',
         'line_two',
         'phone',
+        'active',
         'user_id',
         'city_id',
         'departament_id'
