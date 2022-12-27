@@ -111,4 +111,6 @@ Route::middleware(['auth:sanctum'])->controller(DepatamentController::class)->gr
 
 Route::middleware(['auth:sanctum'])->controller(PaymentController::class)->group(function () {
     Route::post('payment-process', 'poorPayment')->name('payment.process');
+    Route::get('success-process', 'success')->name('payment.success');
+    Route::get('cancel-process', 'cancel')->name('payment.cancel');
 });

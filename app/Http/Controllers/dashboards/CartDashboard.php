@@ -18,7 +18,6 @@ class CartDashboard extends Controller
         return DB::table('shopping_carts')
             ->selectRaw('
                     shopping_carts.quantity as quantity_by_product,
-
                     shopping_carts.*,
                     products.*
                 ')

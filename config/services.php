@@ -32,7 +32,7 @@ return [
     ],
 
     'stripe' => [
-        'secret' => env('STRIPT_SECRET_KEY'),
+        'secret' => env('STRIPE_SECRET_KEY'),
     ],
 
 ];
